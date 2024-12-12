@@ -3,12 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Wallet Allocation Checker</title>
+    <title>Odos Checker</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌊</text></svg>">
 </head>
 <body class="bg-black min-h-screen flex items-center justify-center relative">
     <div class="bg-gray-900 p-8 rounded-lg shadow-2xl w-full max-w-md border border-gray-800">
-        <h1 class="text-2xl font-bold mb-6 text-center text-white">Wallet Allocation Checker</h1>
+        <h1 class="text-2xl font-bold mb-6 text-center text-white">Odos Checker</h1>
         
         <div class="mb-4">
             <input 
@@ -44,6 +45,28 @@
             return /^0x[a-fA-F0-9]{40}$/.test(address);
         }
 
+        // Function to convert Uint256 to human-readable format
+        function formatUint256(value, decimals = 18) {
+            try {
+                // Convert the Uint256 to a BigInt
+                const bigIntValue = BigInt(value);
+                
+                // Divide by 10^decimals to get the actual token amount
+                const divisor = BigInt(10 ** decimals);
+                const formattedValue = Number(bigIntValue / divisor);
+                const remainder = Number(bigIntValue % divisor);
+                
+                // Format with comma separators and fixed decimal places
+                const integerPart = formattedValue.toLocaleString();
+                const decimalPart = remainder.toString().padStart(decimals, '0').slice(0, 4);
+                
+                return `${integerPart}.${decimalPart}`;
+            } catch (error) {
+                console.error('Error formatting Uint256:', error);
+                return value; // Fallback to original value if conversion fails
+            }
+        }
+
         // Function to fetch wallet allocation
         async function fetchWalletAllocation(walletAddress) {
             const resultContainer = document.getElementById('resultContainer');
@@ -61,13 +84,10 @@
                 
                 const data = await response.json();
                 
-                // Display allocation details
+                // Display only pending balance
                 resultContainer.innerHTML = `
                     <div class="bg-gray-800 p-4 rounded-md text-white">
-                        <p class="font-bold text-blue-400">Wallet Allocation Details:</p>
-                        <p>Claimable Balance: <span class="text-green-400">${data.data.claimableTokenBalance}</span></p>
-                        <p>Pending Balance: <span class="text-yellow-400">${data.data.pendingTokenBalance}</span></p>
-                        <p class="text-sm text-gray-500 mt-2">Timestamp: ${data.timestamp}</p>
+                        <p class="text-yellow-400 text-xl">${formatUint256(data.data.pendingTokenBalance)} $Odos</p>
                     </div>
                 `;
             } catch (error) {

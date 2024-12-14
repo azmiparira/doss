@@ -1,0 +1,70 @@
+import os
+from web3 import Web3
+import time
+import concurrent.futures
+
+# Konfigurasikan koneksi ke Ethereum node (gunakan Infura atau node lainnya)
+INFURA_URL = 'https://mainnet.infura.io/v3/YOUR_INFURA_PROJECT_ID'  # Ganti dengan Project ID Anda
+w3 = Web3(Web3.HTTPProvider(INFURA_URL))
+
+def check_balance(address):
+    """
+    Mengecek balance Ethereum untuk satu alamat
+    
+    :param address: Alamat Ethereum yang akan dicek
+    :return: Tuple berisi alamat dan balance (jika > 0)
+    """
+    try:
+        # Pastikan alamat valid
+        address = w3.to_checksum_address(address.strip())
+        
+        # Dapatkan balance dalam wei
+        balance_wei = w3.eth.get_balance(address)
+        
+        # Konversi wei ke ether
+        balance_eth = w3.from_wei(balance_wei, 'ether')
+        
+        # Kembalikan hanya jika balance lebih dari 0
+        if balance_eth > 0:
+            return (address, float(balance_eth))
+        return None
+    except Exception as e:
+        print(f"Error checking {address}: {e}")
+        return None
+
+def main():
+    # Baca alamat dari input.txt
+    try:
+        with open('input.txt', 'r') as f:
+            addresses = f.read().splitlines()
+    except FileNotFoundError:
+        print("File input.txt tidak ditemukan!")
+        return
+
+    # Gunakan thread pool untuk check balance secara concurrent
+    results = []
+    with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
+        # Map addresses ke fungsi check_balance
+        future_to_address = {executor.submit(check_balance, addr): addr for addr in addresses}
+        
+        print("Memproses alamat...")
+        for future in concurrent.futures.as_completed(future_to_address):
+            result = future.result()
+            if result:
+                results.append(result)
+
+    # Tulis hasil ke output.txt
+    if results:
+        with open('output.txt', 'w') as f:
+            f.write("Address,Balance (ETH)\n")
+            for address, balance in sorted(results, key=lambda x: x[1], reverse=True):
+                f.write(f"{address},{balance}\n")
+        
+        print(f"Selesai! Ditemukan {len(results)} alamat dengan balance.")
+    else:
+        print("Tidak ada alamat dengan balance.")
+
+if __name__ == "__main__":
+    start_time = time.time()
+    main()
+    print(f"Waktu eksekusi: {time.time() - start_time:.2f} detik")
